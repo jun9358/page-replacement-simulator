@@ -57,15 +57,19 @@ int hasCached(int frameSize, const int frames[], int reference) {
     return 0;
 }
 
-int optPickVictim(int frameSize, const int frames[], const int references[], int start, int end) {
-    int referenceAts[MAX_FRAMES] = {0,};
-
-    // if has room, pick there
+int pickRoom(int frameSize, const int frames[])
+{
     for (int i = 0; i < frameSize; ++i) {
         if (frames[i] == 0) {
             return i;
         }
     }
+
+    return -1;
+}
+
+int optPickVictim(int frameSize, const int frames[], const int references[], int start, int end) {
+    int referenceAts[MAX_FRAMES] = {0,};
 
     for (int i = 0; i < frameSize; ++i) {
         int j;
@@ -99,7 +103,11 @@ void simulateOpt(struct input input, struct output *output) {
             memcpy(output->frameStatuses[i].frames, currentFrames, sizeof(currentFrames));
             output->frameStatuses[i].hasFault = 0;
         } else {
-            int victim = optPickVictim(input.frameSize, currentFrames, input.references, i + 1, input.referenceSize);
+            int victim;
+            victim = pickRoom(input.frameSize, currentFrames);
+            if (victim == -1) {
+                victim = optPickVictim(input.frameSize, currentFrames, input.references, i + 1, input.referenceSize);
+            }
             currentFrames[victim] = input.references[i];
 
             memcpy(output->frameStatuses[i].frames, currentFrames, sizeof(currentFrames));
