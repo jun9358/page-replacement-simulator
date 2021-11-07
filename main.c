@@ -127,7 +127,7 @@ void printOutput(struct output output) {
 
     printf("\t\tframe\t");
     for (int i = 0; i < output.input.frameSize; ++i) {
-        printf("%d\t", i + 1);
+        printf("%d\t\t", i + 1);
     }
     printf("page fault\n");
 
