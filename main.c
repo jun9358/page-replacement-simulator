@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <memory.h>
+#include "cvector.h"
 
 #define MAX_FRAMES 4
 #define MAX_REFERENCES 30
@@ -116,6 +117,32 @@ void simulateOpt(struct input input, struct output *output) {
     }
 }
 
+void simulateFifo(struct input input, struct output *output) {
+    sprintf(output->usedMethod, "FIFO");
+
+    int currentFrames[MAX_FRAMES] = {0,};
+    cvector_vector_type(int) queue = NULL;
+    for (int i = 0; i < input.referenceSize; i++) {
+        if (hasCached(input.frameSize, currentFrames, input.references[i]) == 1) {
+            memcpy(output->frameStatuses[i].frames, currentFrames, sizeof(currentFrames));
+            output->frameStatuses[i].hasFault = 0;
+        } else {
+            int victim;
+            victim = pickRoom(input.frameSize, currentFrames);
+            if (victim == -1) {
+                victim = *cvector_begin(queue);
+                cvector_erase(queue, 0);
+            }
+            currentFrames[victim] = input.references[i];
+
+            memcpy(output->frameStatuses[i].frames, currentFrames, sizeof(currentFrames));
+            output->frameStatuses[i].hasFault = 1;
+
+            cvector_push_back(queue, victim);
+        }
+    }
+}
+
 void printOutput(struct output output) {
     printf("Used method : %s\n", output.usedMethod);
 
@@ -164,6 +191,8 @@ int main() {
     struct output output;
     output.input = input;
     simulateOpt(input, &output);
+    printOutput(output);
+    simulateFifo(input, &output);
     printOutput(output);
 
     return 0;
