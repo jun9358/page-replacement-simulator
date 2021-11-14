@@ -143,6 +143,63 @@ void simulateFifo(struct input input, struct output *output) {
     }
 }
 
+int lruPickVictim(int frameSize, const int frames[], cvector_vector_type(int) stack) {
+    int referenceAts[MAX_FRAMES] = {0,};
+
+    for (int i = 0; i < frameSize; ++i) {
+        int j;
+        for (j = 0; j < cvector_size(stack); ++j) {
+            if (frames[i] == stack[j]) {
+                referenceAts[i] = j;
+                break;
+            }
+        }
+        referenceAts[i] = referenceAts[i] ? referenceAts[i] : j;
+    }
+
+    int victimIndex = -1;
+    int min = MAX_FRAMES;
+    for (int i = 0; i < frameSize; ++i) {
+        if (referenceAts[i] < min) {
+            victimIndex = i;
+            min = referenceAts[i];
+        }
+    }
+
+    return victimIndex;
+}
+
+void simulateLRU(struct input input, struct output *output) {
+    sprintf(output->usedMethod, "LRU");
+
+    int currentFrames[MAX_FRAMES] = {0,};
+    cvector_vector_type(int) stack = NULL;
+    for (int i = 0; i < input.referenceSize; i++) {
+        if (hasCached(input.frameSize, currentFrames, input.references[i]) == 1) {
+            memcpy(output->frameStatuses[i].frames, currentFrames, sizeof(currentFrames));
+            output->frameStatuses[i].hasFault = 0;
+        } else {
+            int victim;
+            victim = pickRoom(input.frameSize, currentFrames);
+            if (victim == -1) {
+                victim = lruPickVictim(input.frameSize, currentFrames, stack);
+            }
+            currentFrames[victim] = input.references[i];
+
+            memcpy(output->frameStatuses[i].frames, currentFrames, sizeof(currentFrames));
+            output->frameStatuses[i].hasFault = 1;
+        }
+        // Page referenced, move it to the top
+        for (int j = 0; j < cvector_size(stack); ++j) {
+            if (stack[j] == input.references[i]) {
+                cvector_erase(stack, j);
+                break;
+            }
+        }
+        cvector_push_back(stack, input.references[i]);
+    }
+}
+
 void printOutput(struct output output) {
     printf("Used method : %s\n", output.usedMethod);
 
@@ -193,6 +250,8 @@ int main() {
     simulateOpt(input, &output);
     printOutput(output);
     simulateFifo(input, &output);
+    printOutput(output);
+    simulateLRU(input, &output);
     printOutput(output);
 
     return 0;
