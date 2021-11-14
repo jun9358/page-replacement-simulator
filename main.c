@@ -51,11 +51,11 @@ int readInput(struct input *input) {
 int hasCached(int frameSize, const int frames[], int reference) {
     for (int i = 0; i < frameSize; ++i) {
         if (frames[i] == reference) {
-            return 1;
+            return i;
         }
     }
 
-    return 0;
+    return -1;
 }
 
 int pickRoom(int frameSize, const int frames[])
@@ -100,7 +100,7 @@ void simulateOpt(struct input input, struct output *output) {
 
     int currentFrames[MAX_FRAMES] = {0,};
     for (int i = 0; i < input.referenceSize; i++) {
-        if (hasCached(input.frameSize, currentFrames, input.references[i]) == 1) {
+        if (hasCached(input.frameSize, currentFrames, input.references[i]) != -1) {
             memcpy(output->frameStatuses[i].frames, currentFrames, sizeof(currentFrames));
             output->frameStatuses[i].hasFault = 0;
         } else {
@@ -123,7 +123,7 @@ void simulateFifo(struct input input, struct output *output) {
     int currentFrames[MAX_FRAMES] = {0,};
     cvector_vector_type(int) queue = NULL;
     for (int i = 0; i < input.referenceSize; i++) {
-        if (hasCached(input.frameSize, currentFrames, input.references[i]) == 1) {
+        if (hasCached(input.frameSize, currentFrames, input.references[i]) != -1) {
             memcpy(output->frameStatuses[i].frames, currentFrames, sizeof(currentFrames));
             output->frameStatuses[i].hasFault = 0;
         } else {
@@ -175,7 +175,7 @@ void simulateLRU(struct input input, struct output *output) {
     int currentFrames[MAX_FRAMES] = {0,};
     cvector_vector_type(int) stack = NULL;
     for (int i = 0; i < input.referenceSize; i++) {
-        if (hasCached(input.frameSize, currentFrames, input.references[i]) == 1) {
+        if (hasCached(input.frameSize, currentFrames, input.references[i]) != -1) {
             memcpy(output->frameStatuses[i].frames, currentFrames, sizeof(currentFrames));
             output->frameStatuses[i].hasFault = 0;
         } else {
@@ -197,6 +197,38 @@ void simulateLRU(struct input input, struct output *output) {
             }
         }
         cvector_push_back(stack, input.references[i]);
+    }
+}
+
+void simulateSecondChange(struct input input, struct output *output) {
+    sprintf(output->usedMethod, "Second-Change");
+
+    int currentFrames[MAX_FRAMES] = {0,};
+    int referenceBits[MAX_FRAMES] = {0,};
+    int referenceBitPointer = 0;
+    for (int i = 0; i < input.referenceSize; i++) {
+        int cachedIndex;
+        if ((cachedIndex = hasCached(input.frameSize, currentFrames, input.references[i])) != -1) {
+            referenceBits[cachedIndex] = 1;
+
+            memcpy(output->frameStatuses[i].frames, currentFrames, sizeof(currentFrames));
+            output->frameStatuses[i].hasFault = 0;
+        } else {
+            int victim;
+            victim = pickRoom(input.frameSize, currentFrames);
+            if (victim == -1) {
+                while (referenceBits[referenceBitPointer] != 0) {
+                    referenceBits[referenceBitPointer] = 0;
+                    referenceBitPointer = (referenceBitPointer + 1) % input.frameSize;
+                }
+                victim = referenceBitPointer;
+                referenceBitPointer = (referenceBitPointer + 1) % input.frameSize;
+            }
+            currentFrames[victim] = input.references[i];
+
+            memcpy(output->frameStatuses[i].frames, currentFrames, sizeof(currentFrames));
+            output->frameStatuses[i].hasFault = 1;
+        }
     }
 }
 
@@ -252,6 +284,8 @@ int main() {
     simulateFifo(input, &output);
     printOutput(output);
     simulateLRU(input, &output);
+    printOutput(output);
+    simulateSecondChange(input, &output);
     printOutput(output);
 
     return 0;
