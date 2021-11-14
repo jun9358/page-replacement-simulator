@@ -267,6 +267,7 @@ void printOutput(struct output output) {
     }
 
     printf("Number of page faults : %d times\n", cntPageFault);
+    printf("\n");
 }
 
 int main() {
