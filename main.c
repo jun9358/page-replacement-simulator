@@ -146,27 +146,15 @@ void simulateFifo(struct input input, struct output *output) {
 int lruPickVictim(int frameSize, const int frames[], cvector_vector_type(int) stack) {
     int referenceAts[MAX_FRAMES] = {0,};
 
-    for (int i = 0; i < frameSize; ++i) {
-        int j;
-        for (j = 0; j < cvector_size(stack); ++j) {
-            if (frames[i] == stack[j]) {
-                referenceAts[i] = j;
-                break;
+    for (int i = 0; i < cvector_size(stack); ++i) {
+        for (int j = 0; j < frameSize; ++j) {
+            if (stack[i] == frames[j]) {
+                return j;
             }
         }
-        referenceAts[i] = referenceAts[i] ? referenceAts[i] : j;
     }
 
-    int victimIndex = -1;
-    int min = MAX_FRAMES;
-    for (int i = 0; i < frameSize; ++i) {
-        if (referenceAts[i] < min) {
-            victimIndex = i;
-            min = referenceAts[i];
-        }
-    }
-
-    return victimIndex;
+    return -1;
 }
 
 void simulateLRU(struct input input, struct output *output) {
