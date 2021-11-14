@@ -188,8 +188,8 @@ void simulateLRU(struct input input, struct output *output) {
     }
 }
 
-void simulateSecondChange(struct input input, struct output *output) {
-    sprintf(output->usedMethod, "Second-Change");
+void simulateSecondChance(struct input input, struct output *output) {
+    sprintf(output->usedMethod, "Second-Chance");
 
     int currentFrames[MAX_FRAMES] = {0,};
     int referenceBits[MAX_FRAMES] = {0,};
@@ -274,7 +274,7 @@ int main() {
     printOutput(output);
     simulateLRU(input, &output);
     printOutput(output);
-    simulateSecondChange(input, &output);
+    simulateSecondChance(input, &output);
     printOutput(output);
 
     return 0;
